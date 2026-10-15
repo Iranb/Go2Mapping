@@ -108,10 +108,6 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn('stop_response', demo.report)
 
     async def test_missing_new_frames_prevents_resume_and_pause_time_is_bounded(self):
-        demo = FakeDemo()
-        demo.owner = 'operator'
-        demo.report = {'pauses': []}
-        demo.state_time -= .4
         clock, real_sleep = Clock(), asyncio.sleep
         ticks = 0
         async def tick(seconds):
@@ -124,6 +120,10 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
                 demo.sport_sequence -= 1
             await real_sleep(0)
         with patch.object(app, 'time', clock.namespace()), patch.object(app.asyncio, 'sleep', tick):
+            # Keep sensor and operator timestamps in the simulated clock domain.
+            demo = FakeDemo()
+            demo.owner = 'operator'
+            demo.report = {'pauses': []}
             demo.state_time = clock.value-.4
             with self.assertRaisesRegex(RuntimeError, '3 seconds'):
                 await demo.motion_feedback()
