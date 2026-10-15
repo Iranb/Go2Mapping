@@ -1,0 +1,36 @@
+name: Offline tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          brew install portaudio
+          export CPPFLAGS="-I$(brew --prefix portaudio)/include"
+          export LDFLAGS="-L$(brew --prefix portaudio)/lib"
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Verify imports and HTTP assets without a robot
+        run: python work/verify_install.py
+      - name: Run public Python regression suite
+        run: python -m unittest discover -s work -p 'test_go2_*.py'
+      - name: Run JavaScript UI scenarios
+        run: |
+          node work/test_go2_navigation_ui.mjs
+          node work/test_go2_spatial_ui.mjs
+      - name: Check publication contents
+        run: python work/check_public_source.py

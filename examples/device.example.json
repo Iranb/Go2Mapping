@@ -1,0 +1,4 @@
+{
+  "sn": "YOUR_ROBOT_SERIAL",
+  "aes_128_key": "YOUR_32_HEX_CHARACTER_AES_KEY"
+}

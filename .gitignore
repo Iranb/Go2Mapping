@@ -1,0 +1,51 @@
+# Local runtimes and caches
+.venv/
+.python/
+.tools/
+wheelhouse/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Credentials, LAN settings, handoffs, recordings and archives
+connection.json
+device.json
+**/device.json
+*.pem
+*.key
+*.log
+*.zip
+*.npz
+*.ply
+*.pcd
+*.bag
+*.db
+*.sqlite*
+HANDOFF*.md
+evidence/
+work/fixtures/
+work/nav_scene.npz
+setup.log
+offline-verify.log
+deployment-status.json
+
+# outputs contains application source as well as private runtime data.
+# Allow only the reviewed web sources and the procedural replay.
+/outputs/*
+!/outputs/go2-live-demo/
+/outputs/go2-live-demo/*
+!/outputs/go2-live-demo/index.html
+!/outputs/go2-live-demo/assets/
+!/outputs/go2-live-demo/vendor/
+/outputs/go2-live-demo/assets/*
+!/outputs/go2-live-demo/assets/photo-depth.js
+!/outputs/go2-live-demo/assets/panorama-view.js
+!/outputs/go2-live-demo/assets/spatial-photos.js
+!/outputs/go2-live-demo/assets/navigation-simulation.html
+!/outputs/go2-live-demo/assets/navigation-synthetic.json

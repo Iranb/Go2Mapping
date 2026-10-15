@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Go2Mapping · Synthetic navigation replay</title>
+<style>
+:root{color-scheme:dark;font:14px system-ui,sans-serif;background:#0b101b;color:#eaf0f8}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:28px}h1{font-size:25px;margin:0 0 10px}p{color:#9eb3c8;line-height:1.7}a{color:#5eead4}canvas{display:block;width:100%;height:440px;background:#101b2b;border:1px solid #304459;border-radius:12px}.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:18px 0}button,select{font:inherit;padding:9px 14px;border:1px solid #375369;background:#192c3d;color:#d8fff6;border-radius:8px}button{cursor:pointer}input{flex:1;min-width:150px;accent-color:#5eead4}#metrics{font:13px ui-monospace,monospace;line-height:1.9;min-height:50px}small{color:#9eb3c8}@media(max-width:600px){main{padding:18px}canvas{height:350px}h1{font-size:21px}}
+</style>
+</head>
+<body><main>
+<a href="/">← Go2Mapping</a><h1>Synthetic navigation replay</h1>
+<p>A procedural floor and short wall, replayed through the navigation controller under three assumed actuator responses. All data here is synthetic. No robot connection or real room recording is used.</p>
+<canvas id="map" aria-label="Top view of the synthetic wall, checked route and simulated robot trajectory"></canvas>
+<div class="controls"><label for="profile">Response</label><select id="profile"><option value="nominal">Nominal · 50 ms</option><option value="delayed">Delayed · 150 ms</option><option value="slow">Slow · 200 ms</option></select><button id="play" type="button">Play</button><input id="time" type="range" min="0" max="1" step=".01" value="0" aria-label="Replay time"><output id="clock">0.0 s</output></div>
+<div id="metrics" role="status">Loading synthetic replay…</div>
+<p><span style="color:#fb7185">■ Obstacle</span> · <span style="color:#5eead4">— Checked route</span> · <span style="color:#8ab4ff">— Simulated trajectory</span> · ○ Goal and arrival radius</p>
+<small>The planar model includes latency, acceleration and deadband. It does not model contact, legs, slip, odometry drift or new viewpoints. Geometric checks use the planner model; simulation completion is not a physical safety guarantee.</small>
+</main><script type="module">
+const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d');
+let data,active,playing=false,previous=0;
+function select(){active=data.cases[$('profile').value];$('time').max=active.elapsed_s;$('time').value=0;playing=false;$('play').textContent='Play';$('metrics').textContent=active.outcome+' · '+active.final_distance_m.toFixed(3)+' m from goal · '+active.elapsed_s.toFixed(1)+' s total. '+active.message;draw()}
+function draw(){
+ if(!active)return;const w=canvas.clientWidth,h=canvas.clientHeight,scale=Math.min(w/5,h/4),time=Number($('time').value),trace=active.trace;
+ canvas.width=Math.round(w*devicePixelRatio);canvas.height=Math.round(h*devicePixelRatio);ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);ctx.clearRect(0,0,w,h);
+ const xy=p=>[w*.30+p[0]*scale,h*.5-p[1]*scale];ctx.strokeStyle='#253c50';ctx.lineWidth=1;
+ for(let x=-2;x<=3;x+=.5){const a=xy([x,-2]),b=xy([x,2]);ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke()}
+ for(let y=-2;y<=2;y+=.5){ctx.beginPath();ctx.moveTo(...xy([-2,y]));ctx.lineTo(...xy([3,y]));ctx.stroke()}
+ ctx.fillStyle='#fb7185';for(const p of data.occupied){const [x,y]=xy(p);ctx.fillRect(x-scale*.025,y-scale*.025,Math.max(3,scale*.05),Math.max(3,scale*.05))}
+ function line(points,color){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();points.forEach((p,i)=>ctx[i?'lineTo':'moveTo'](...xy(p)));ctx.stroke()}
+ line(active.plan.path,'#5eead4');const shown=trace.filter(p=>p[0]<=time);line(shown.map(p=>p.slice(1,3)),'#8ab4ff');
+ const [gx,gy]=xy(data.target);ctx.strokeStyle='#ffd28a';ctx.beginPath();ctx.arc(gx,gy,scale*.2,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffd28a';ctx.fillRect(gx-2,gy-2,4,4);
+ const pose=shown.at(-1)??[0,...data.start,0],[x,y]=xy(pose.slice(1,3));ctx.save();ctx.translate(x,y);ctx.rotate(-pose[3]);ctx.fillStyle='#b8fff0';ctx.fillRect(-scale*.35,-scale*.15,scale*.7,scale*.3);ctx.fillStyle='#122a32';ctx.beginPath();ctx.moveTo(scale*.34,0);ctx.lineTo(scale*.12,-scale*.08);ctx.lineTo(scale*.12,scale*.08);ctx.fill();ctx.restore();$('clock').textContent=time.toFixed(1)+' s';
+}
+$('profile').onchange=select;$('time').oninput=()=>{playing=false;$('play').textContent='Play';draw()};$('play').onclick=()=>{if(!active)return;if(Number($('time').value)>=active.elapsed_s)$('time').value=0;playing=!playing;$('play').textContent=playing?'Pause':'Play'};
+function animate(stamp){const dt=previous?Math.min((stamp-previous)/1000,.1):0;previous=stamp;if(playing&&active){$('time').value=Math.min(active.elapsed_s,Number($('time').value)+dt);draw();if(Number($('time').value)>=active.elapsed_s){playing=false;$('play').textContent='Play'}}requestAnimationFrame(animate)}
+new ResizeObserver(draw).observe(canvas);requestAnimationFrame(animate);
+try{const response=await fetch('/assets/navigation-synthetic.json');if(!response.ok)throw new Error('Replay data unavailable');data=await response.json();select()}catch(error){$('metrics').textContent=error.message;$('play').disabled=true}
+</script></body></html>
