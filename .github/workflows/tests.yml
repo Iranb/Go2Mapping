@@ -32,28 +32,7 @@ jobs:
       - name: Verify imports and HTTP assets without a robot
         run: python work/verify_install.py
       - name: Run public Python regression suite
-        env:
-          TEST_SHARD: ${{ matrix.shard }}
-        run: |
-          python - <<'PY'
-          import os
-          import unittest
-
-          def cases(suite):
-              for item in suite:
-                  if isinstance(item, unittest.TestSuite):
-                      yield from cases(item)
-                  else:
-                      yield item
-
-          discovered = list(cases(unittest.defaultTestLoader.discover('work', pattern='test_go2_*.py')))
-          assert discovered, 'No regression tests found'
-          shard = int(os.environ['TEST_SHARD'])
-          selected = discovered[shard::3]
-          print(f'Shard {shard}: {len(selected)} of {len(discovered)} discovered tests', flush=True)
-          result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(selected))
-          raise SystemExit(not result.wasSuccessful())
-          PY
+        run: python work/run_offline_tests.py --shard ${{ matrix.shard }} --shards 3
       - name: Run JavaScript UI scenarios
         run: |
           node work/test_go2_navigation_ui.mjs
